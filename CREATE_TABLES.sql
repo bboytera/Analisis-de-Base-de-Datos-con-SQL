@@ -1,56 +1,49 @@
-CREATE TABLE `clients` (
-  `client_id` int UNSIGNED PRIMARY KEY NOT NULL AUTO_INCREMENT,
-  `name` varchar(100) NOT NULL,
-  `email` varchar(30) UNIQUE NOT NULL,
-  `phone_number` varchar(15),
-  `created_at` timestamp NOT NULL DEFAULT (CURRENT_TIMESTAMP),
-  `updated_at` timestamp NOT NULL DEFAULT (CURRENT_TIMESTAMP) on update CURRENT_TIMESTAMP
-);
+-- Run on a new empty MySQL 8.0.16+ database. No DROP statements.
+CREATE TABLE clients (
+  client_id INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(100) NOT NULL,
+  email VARCHAR(254) NOT NULL UNIQUE,
+  phone_number VARCHAR(32),
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB;
 
-CREATE TABLE `products` (
-  `product_id` int UNSIGNED PRIMARY KEY  AUTO_INCREMENT,
-  `sku varchar` (20) NOT NULL UNIQUE,
-  `name` varchar(100) NOT NULL,
-  `slug` varchar(100) NOT NULL UNIQUE,
-  `description` text,
-  `price` decimal(10,2),
-  `created_at` timestamp NOT NULL DEFAULT (CURRENT_TIMESTAMP),
-  `updated_at` timestamp NOT NULL DEFAULT (CURRENT_TIMESTAMP) on update CURRENT_TIMESTAMP
-);
+CREATE TABLE products (
+  product_id INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  sku VARCHAR(20) NOT NULL UNIQUE,
+  name VARCHAR(100) NOT NULL,
+  slug VARCHAR(100) NOT NULL UNIQUE,
+  description TEXT,
+  price DECIMAL(12,2) NOT NULL,
+  stock INT UNSIGNED NOT NULL DEFAULT 0,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  CONSTRAINT chk_product_price CHECK (price >= 0)
+) ENGINE=InnoDB;
 
-CREATE TABLE `bills` (
-  `bill_id` int UNSIGNED PRIMARY KEY  AUTO_INCREMENT,
-  `client_id` int NOT NULL,
-  `total` float,
-  `status` enum('open','paid','lost') NOT NULL DEFAULT 'open',
-  `created_at` timestamp NOT NULL DEFAULT (CURRENT_TIMESTAMP),
-  `updated_at` timestamp NOT NULL DEFAULT (CURRENT_TIMESTAMP) on update CURRENT_TIMESTAMP
-);
+CREATE TABLE bills (
+  bill_id INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  client_id INT UNSIGNED NOT NULL,
+  total DECIMAL(16,2),
+  status ENUM('open','paid','lost') NOT NULL DEFAULT 'open',
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  CONSTRAINT fk_bill_client FOREIGN KEY (client_id) REFERENCES clients(client_id)
+) ENGINE=InnoDB;
 
-CREATE TABLE `bill_products` (
-  `bill_product_id` int UNSIGNED PRIMARY KEY  AUTO_INCREMENT,
-  `product_id` int UNSIGNED NOT NULL,
-  `bill_id` int UNSIGNED NOT NULL,
-  `quantity` int  NOT NULL DEFAULT 1,
-  `created_at` timestamp NOT NULL DEFAULT (CURRENT_TIMESTAMP),
-  `updated_at` timestamp NOT NULL DEFAULT (CURRENT_TIMESTAMP) on update CURRENT_TIMESTAMP
-);
-
---CREATE TABLE `product_changes` (
- -- `change_id` int PRIMARY KEY NOT NULL AUTO_INCREMENT,
- -- `product_id` int NOT NULL,
- --- `modified_at` timestamp NOT NULL DEFAULT (CURRENT_TIMESTAMP),
---  `change_description` text
---);
-
---CREATE UNIQUE INDEX `product_changes_index_0` ON `product_changes` (`product_id`);
-
---ALTER TABLE `bills` ADD FOREIGN KEY (`client_id`) REFERENCES `clients` (`client_id`);
-
---ALTER TABLE `bill_products` ADD FOREIGN KEY (`product_id`) REFERENCES `products` (`product_id`);
-
---ALTER TABLE `bill_products` ADD FOREIGN KEY (`bill_id`) REFERENCES `bills` (`bill_id`);
-
---ALTER TABLE `product_changes` ADD FOREIGN KEY (`product_id`) REFERENCES `products` (`product_id`);
-
---ALTER TABLE `bills` ADD FOREIGN KEY (`bill_id`) REFERENCES `bills` (`total`);
+CREATE TABLE bill_products (
+  bill_product_id INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  product_id INT UNSIGNED NOT NULL,
+  bill_id INT UNSIGNED NOT NULL,
+  quantity INT UNSIGNED NOT NULL DEFAULT 1,
+  price DECIMAL(12,2) NOT NULL,
+  discount DECIMAL(5,2) NOT NULL DEFAULT 0,
+  date_added DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  CONSTRAINT chk_quantity CHECK (quantity > 0),
+  CONSTRAINT chk_line_price CHECK (price >= 0),
+  CONSTRAINT chk_discount CHECK (discount BETWEEN 0 AND 100),
+  CONSTRAINT fk_line_product FOREIGN KEY (product_id) REFERENCES products(product_id),
+  CONSTRAINT fk_line_bill FOREIGN KEY (bill_id) REFERENCES bills(bill_id)
+) ENGINE=InnoDB;
